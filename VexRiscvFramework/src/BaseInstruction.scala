@@ -11,8 +11,8 @@ abstract class BaseInstruction(
   val rs3: RegisterAccess = Unused,
   val rsAlt: RegisterAccess = Unused,
   val rd: RegisterAccess = Unused,
-  val memRead: SpinalEnumElement[MEM_USAGE.type] = MEM_USAGE.Unused,
-  val memWrite: SpinalEnumElement[MEM_USAGE.type] = MEM_USAGE.Unused,
+  /* val memRead: SpinalEnumElement[MEM_USAGE.type] = MEM_USAGE.Unused,
+  val memWrite: SpinalEnumElement[MEM_USAGE.type] = MEM_USAGE.Unused, */
   val bypass: Bypass = Bypass.Managed,
   val destIsFirstOperand: Boolean = false,
   shortName: String = "",
@@ -86,7 +86,7 @@ abstract class BaseInstruction(
           case Unused         => RS2_USE   -> False
           case Regular        => RS2_USE   -> True
         }
-      ) ++ (((memRead, memWrite) match {
+      ) /* ++ (((memRead, memWrite) match {
         // Set signal for memory access
         case (MEM_USAGE.Unused, MEM_USAGE.Unused) => Nil
         case (MEM_USAGE.Unused, usage) =>
@@ -99,7 +99,7 @@ abstract class BaseInstruction(
             (if (more.exists(_._1 == OVERWRITE_SIZE_ORDER)) Nil
              else List(OVERWRITE_SIZE_ORDER -> OVERWRITE_SIZE.WORD))
         case _ => Nil
-      })) // Set bypass signals
+      })) */ // Set bypass signals
         ++ (if (!isManaged || bypass != Bypass.Managed) bypass match {
               case Bypass.NoBypass | Bypass.Managed => List(BYPASSABLE_EXECUTE_STAGE -> False, BYPASSABLE_MEMORY_STAGE -> False)
               case Bypass.AfterExecute              => List(BYPASSABLE_EXECUTE_STAGE -> True, BYPASSABLE_MEMORY_STAGE -> True)
@@ -145,26 +145,6 @@ abstract class BaseInstruction(
     case Regular        => ctx.stage.input(ctx.config.RS2)
   }
 
-  /** Returns the third operand as usable value. */
-  protected def thirdOperand(implicit ctx: Ctx): Bits = rs3 match {
-    case Unused         => throw new Exception(s"Reading an undeclared operand in ${this.getClass.getSimpleName.replace("$", "")}")
-    case Regular        => throw new Exception(s"Reading an illegal third operand in ${this.getClass.getSimpleName.replace("$", "")}")
-  }
-
-  /** Returns the third operand as usable value. */
-  protected def alternativeOperand(implicit ctx: Ctx): Bits = rsAlt match {
-    case Unused   => throw new Exception(s"Reading an undeclared operand in ${this.getClass.getSimpleName.replace("$", "")}")
-    case Regular  => ctx.stage.input(EnhancedRegPlugin.RSALT)
-  }
-
-  /** Returns the pre modification value that was read. */
-  protected def rawReadMemory(implicit ctx: Ctx): Bits =
-    MEMORY_READ_MOD.read
-
-  /** Returns the pre modification value that will be written. */
-  protected def rawStoreMemory(implicit ctx: Ctx): Bits =
-    MEMORY_WRITE_MOD.read
-
   /** Returns the requested stageable as usable value. */
   protected def readSignal[A <: BitVector](value: Stageable[A])(implicit ctx: Ctx): A =
     ctx.stage.input(value)
@@ -181,18 +161,6 @@ abstract class BaseInstruction(
           throw new Exception(s"Writing to a undeclared destination in ${this.getClass.getSimpleName.replace("$", "")}")
         case Regular        => ctx.stage.output(ctx.config.REGFILE_WRITE_DATA) := value.asBits
       }
-    }
-
-  /** Writes the given value as output for a modified load. */
-  protected def writeLoadMemMod(value: BitVector)(implicit ctx: Ctx): Unit =
-    when(ctx.stage.arbitration.isValid && ctx.stage.input(INSTRUCTION_ACTIVE)) {
-      ctx.stage.output(MEMORY_READ_MODDED) := value.asBits
-    }
-
-  /** Writes the given value as input for a modified store. */
-  protected def writeStoreMemMod(value: BitVector)(implicit ctx: Ctx): Unit =
-    when(ctx.stage.arbitration.isValid && ctx.stage.input(INSTRUCTION_ACTIVE)) {
-      ctx.stage.output(MEMORY_WRITE_MODDED) := value.asBits
     }
 
   /** Describe the instructions actions. */
