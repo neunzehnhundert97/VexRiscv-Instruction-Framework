@@ -2,3 +2,5 @@
 .history
 .metals
 .vscode
+.bloop
+out

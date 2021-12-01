@@ -103,6 +103,10 @@ The main computation now takes up the biggest part of the code and the configura
 ** Prerequisits and Installation
 The framework was developed using =VexRiscv= commit fe739b907a6a2dc046b707e9f6dba2db959b8362 (May 11th 2021) and its depenencies. The framework consists currently only of a few files you can easily drop into your project and use for the instruction you seem fit.
 
+*Do not* take the =build.sc= and =.mill-version= files, they only exist to verify the code can compile.
+
+Functionality regarding memory access is currently commented out, as the required stageables are defined in the respective plugins and not globally.
+
 As VexRiscv is not available on Maven etc. I see no use in bundling the framework in a library either.
 
 ** Usage
