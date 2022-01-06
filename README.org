@@ -12,25 +12,25 @@ import vexriscv.plugin.Plugin
 import vexriscv.{Stageable, DecoderService, VexRiscv}
 
 class SimdAddPlugin extends Plugin[VexRiscv]{
-  //Define the concept of IS_SIMD_ADD signals, which specify if the current instruction is destined for this plugin
+  // Define the concept of IS_SIMD_ADD signals, which specify if the current instruction is destined for this plugin
   object IS_SIMD_ADD extends Stageable(Bool)
 
-  //Callback to setup the plugin and ask for different services
+  // Callback to setup the plugin and ask for different services
   override def setup(pipeline: VexRiscv): Unit = {
     import pipeline.config._
 
-    //Retrieve the DecoderService instance
+    // Retrieve the DecoderService instance
     val decoderService = pipeline.service(classOf[DecoderService])
 
-    //Specify the IS_SIMD_ADD default value when instructions are decoded
+    // Specify the IS_SIMD_ADD default value when instructions are decoded
     decoderService.addDefault(IS_SIMD_ADD, False)
 
-    //Specify the instruction decoding which should be applied when the instruction matches the 'key' parttern
+    // Specify the instruction decoding which should be applied when the instruction matches the 'key' parttern
     decoderService.add(
-      //Bit pattern of the new SIMD_ADD instruction
+      // Bit pattern of the new SIMD_ADD instruction
       key = M"0000011----------000-----0110011",
 
-      //Decoding specification when the 'key' pattern is recognized in the instruction
+      // Decoding specification when the 'key' pattern is recognized in the instruction
       List(
         IS_SIMD_ADD              -> True,
         REGFILE_WRITE_VALID      -> True, //Enable the register file write
@@ -46,21 +46,21 @@ class SimdAddPlugin extends Plugin[VexRiscv]{
     import pipeline._
     import pipeline.config._
 
-    //Add a new scope on the execute stage (used to give a name to signals)
+    // Add a new scope on the execute stage (used to give a name to signals)
     execute plug new Area {
-      //Define some signals used internally by the plugin
+      // Define some signals used internally by the plugin
       val rs1 = execute.input(RS1).asUInt
-      //32 bits UInt value of the regfile[RS1]
+      // 32 bits UInt value of the regfile[RS1]
       val rs2 = execute.input(RS2).asUInt
       val rd = UInt(32 bits)
 
-      //Do some computations
+      // Do some computations
       rd(7 downto 0) := rs1(7 downto 0) + rs2(7 downto 0)
       rd(16 downto 8) := rs1(16 downto 8) + rs2(16 downto 8)
       rd(23 downto 16) := rs1(23 downto 16) + rs2(23 downto 16)
       rd(31 downto 24) := rs1(31 downto 24) + rs2(31 downto 24)
 
-      //When the instruction is a SIMD_ADD, write the result into the register file data path.
+      // When the instruction is a SIMD_ADD, write the result into the register file data path.
       when(execute.input(IS_SIMD_ADD)) {
         execute.output(REGFILE_WRITE_DATA) := rd.asBits
       }
@@ -80,14 +80,14 @@ import RegisterAccess._
 
 class SIMDAdd extends BaseInstruction(rs1 = Regular, rs2 = Regular, rd = Regular) with RTypeInstruction {
 
-	//Add a new scope on the execute stage (used to give a name to signals)
+	// Add a new scope on the execute stage (used to give a name to signals)
   execute { implicit ctx =>
-    //Define some signals used internally to the plugin
+    // Define some signals used internally to the plugin
     val rs1 = firstOperand.asUInt //32 bits UInt value of the regfile[RS1]
     val rs2 = secondOperand.asUInt //32 bits UInt value of the regfile[RS2]
     val tmp = UInt(32 bits)
     
-    //Do some computation
+    // Do some computation
     tmp(31 downto 24) := rs1(31 downto 24) + rs2(31 downto 24)
     tmp(23 downto 16) := rs1(23 downto 16) + rs2(23 downto 16)
     tmp(15 downto 8) := rs1(15 downto 8) + rs2(15 downto 8)
@@ -100,17 +100,17 @@ class SIMDAdd extends BaseInstruction(rs1 = Regular, rs2 = Regular, rd = Regular
 
 The main computation now takes up the biggest part of the code and the configuration is done automatically base on the information given in the constructor. The opcode is generated for you within a predefined space.
 
-** Prerequisits and Installation
-The framework was developed using =VexRiscv= commit fe739b907a6a2dc046b707e9f6dba2db959b8362 (May 11th 2021) and its depenencies. The framework consists currently only of a few files you can easily drop into your project and use for the instruction you seem fit.
+** Prerequisites and Installation
+The framework was developed using =VexRiscv= commit =fe739b907a6a2dc046b707e9f6dba2db959b8362= (May 11th 2021) and its dependencies. The framework consists currently only of a few files you can easily drop into your project and use for the instruction you seem fit.
 
-*Do not* take the =build.sc= and =.mill-version= files, they only exist to verify the code can compile.
+*Do not* take the =build.sc= and =.mill-version= files, they only exist to verify that the code can compile successfully.
 
 Functionality regarding memory access is currently commented out, as the required stageables are defined in the respective plugins and not globally.
 
 As VexRiscv is not available on Maven etc. I see no use in bundling the framework in a library either.
 
 ** Usage
-Create a new class for your instruction and extend =BaseInstruction=. Depending on your desired functionality, you should mixin the appropiate encoding (=RTypeInstruction= etc.) or overload the required defs yourself.
+Create a new class for your instruction and extend =BaseInstruction=. Depending on your desired functionality, you should mix-in the appropriate encoding (=RTypeInstruction= etc.) or overload the required defs yourself.
 
 
 The =BaseInstruction= has to be supplied with your desired configuration options, for example =rd = Regular= if you intend to use the destination register.
@@ -132,7 +132,7 @@ The implicit context is used for some /magic/ on can be ignored. Once =VexRiscv=
 Inside these blocks, you can normally describe your logic. You may read and write stageables using a few functions.
 
 #+begin_src scala 
-val rs1 = firstOperand // Reads rs1 as Bits
+val rs1 = firstOperand  // Reads rs1 as Bits
 val rs2 = secondOperand // Reads rs2 as Bits
 val temp = read(SOME_STAGEABLE)
 
@@ -149,4 +149,15 @@ import ctx.config._ // Import the config from the context
 val a = input(SOME_STAGEABLE)
 insert(SOME_OTHER_STAGEABLE) := B(0)
 #+end_src
+
+** FAQ
+*** How do I set the opcode manually?
+The opcode generation is very handy if you want to automate the whole core generation but very useless otherwise.
+To disable it and choose your own opcode, you can just override ~instructionPattern~:
+
+#+begin_src scala
+// inside your class extending BaseInstruction
+override def instructionPattern: String = "-----------------101-----010101"
+#+end_src
+
 
